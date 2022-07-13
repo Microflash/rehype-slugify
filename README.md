@@ -14,13 +14,15 @@
 - [Use](#use)
 - [API](#api)
 	- [Options](#options)
+- [Examples](#examples)
+	- [Example: integrating with `@sindresorhus/slugify`](#example-integrating-with-sindresorhusslugify)
 - [Security](#security)
 - [Related](#related)
 - [License](#license)
 
 ## What's this?
 
-This package is a [unified](https://github.com/unifiedjs/unified) ([rehype](https://github.com/rehypejs/rehype)) plugin to add `id`s to headings. It looks for headings (`<h1>` through `<h6>`) that do not yet have `id`s and adds `id` attributes to them based on the text they contain. You'll have to provide an implementation of the algorithm that does that, such as [`github-slugger`](https://github.com/Flet/github-slugger), [`@sindresorhus/slugify`](https://github.com/sindresorhus/slugify),etc.
+This package is a [unified](https://github.com/unifiedjs/unified) ([rehype](https://github.com/rehypejs/rehype)) plugin to add `id`s to headings. It looks for headings (`<h1>` through `<h6>`) that do not yet have `id`s and adds `id` attributes to them based on the text they contain. You'll have to provide an implementation of the algorithm that does that, such as [`github-slugger`](https://github.com/Flet/github-slugger), [`@sindresorhus/slugify`](https://github.com/sindresorhus/slugify), etc.
 
 ## When should I use this?
 
@@ -59,7 +61,7 @@ In browsers, with [esm.sh](https://esm.sh/):
 Say we have the following file `example.html`:
 
 ```html
-<h1 id=some-id>Lorem ipsum</h1>
+<h1 id="some-id">Lorem ipsum</h1>
 <h2>Dolor sit amet 😪</h2>
 <h3>consectetur &amp; adipisicing</h3>
 <h4>elit</h4>
@@ -114,7 +116,63 @@ The default export is `rehypeSlugify`.
 The following options are available. All of them are required.
 
 - `reset`: function that resets the slug counter
-- `slugify`: function that slugifies the text
+- `slugify(text)`: function that slugifies the text and returns the slug
+
+## Examples
+
+### Example: integrating with [`@sindresorhus/slugify`](https://github.com/sindresorhus/slugify)
+
+Say we have the following file `example.html`:
+
+```html
+<h1 id="some-id">Lorem ipsum</h1>
+<h2>Dolor sit amet 😪</h2>
+<h3>consectetur &amp; adipisicing</h3>
+<h4>elit</h4>
+<h5>sed@do</h5>
+```
+
+And our module `example.js` looks as follows:
+
+```js
+import { slugifyWithCounter } from '@sindresorhus/slugify'
+import { read } from 'to-vfile'
+import { rehype } from 'rehype'
+import rehypeSlugify from '@microflash/rehype-slugify'
+
+const slugify = slugifyWithCounter()
+const slugifyOptions = {
+  customReplacements: [['&', 'and']]
+}
+
+main()
+
+async function main() {
+  const file = await rehype()
+    .data('settings', { fragment: true })
+    .use(rehypeSlugify, {
+      reset() {
+        slugify.reset()
+      },
+      slugify(text) {
+        return slugify(text, slugifyOptions)
+      }
+    })
+    .process(await read('example.html'))
+
+  console.log(String(file))
+}
+```
+
+Running that with `node example.js` yields:
+
+```html
+<h1 id="some-id">Lorem ipsum</h1>
+<h2 id="dolor-sit-amet">Dolor sit amet 😪</h2>
+<h3 id="consectetur-and-adipisicing">consectetur &#x26; adipisicing</h3>
+<h4 id="elit">elit</h4>
+<h5 id="sedatdo">sed@do</h5>
+```
 
 ## Security
 
